@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import API_BASE_URL from '../../config';
 import axios from "axios";
 
 const StaffManagement = () => {
@@ -30,7 +31,7 @@ const StaffManagement = () => {
   const fetchStaff = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://localhost:5000/api/staff", { headers });
+      const res = await axios.get(`${API_BASE_URL}/api/staff`, { headers });
       setStaffList(res.data);
       setError(null);
     } catch (err) {
@@ -61,8 +62,8 @@ const StaffManagement = () => {
 
     setLoading(true);
     const url = editId
-      ? `http://localhost:5000/api/staff/${editId}`
-      : "http://localhost:5000/api/staff";
+      ? `${API_BASE_URL}/api/staff/${editId}`
+      : `${API_BASE_URL}/api/staff`;
 
     try {
       const res = editId
@@ -86,7 +87,7 @@ const StaffManagement = () => {
   const handleDelete = async (id) => {
     setLoading(true);
     try {
-      await axios.delete(`http://localhost:5000/api/staff/${id}`, { headers });
+      await axios.delete(`${API_BASE_URL}/api/staff/${id}`, { headers });
       setStaffList((prev) => prev.filter((s) => s._id !== id));
       if (editId === id) resetForm();
     } catch (err) {

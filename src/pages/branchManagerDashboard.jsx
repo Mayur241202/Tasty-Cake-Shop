@@ -4,6 +4,7 @@ import StaffManagement from "../components/branchManager/staffManagement";
 import OrdersAnalysis from "../components/branchManager/ordersAnalysis";
 import BranchManagerFeedback from "../components/branchManager/feedback";
 import Header from "../components/header";
+import API_BASE_URL from '../config';
 
 const sidebarItems = [
   { name: "Inventory", icon: "📦" },

@@ -1,3 +1,5 @@
+import API_BASE_URL from '../config';
+
 const Footer = () => {
     return (
       <footer className="bg-gray-900 text-white py-8 mt-12">

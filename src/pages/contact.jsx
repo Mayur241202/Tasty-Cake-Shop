@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
+import API_BASE_URL from '../config';
 
 const Contact = () => {
   const [formData, setFormData] = useState({

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
+import API_BASE_URL from '../config';
 
 const About = () => {
   const [topCakes, setTopCakes] = useState([]);

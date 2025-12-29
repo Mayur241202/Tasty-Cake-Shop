@@ -8,6 +8,7 @@ import OrderHistory from "../components/orderHistory";
 import OffersSection from "../components/offersSection"; // <-- import offers section
 import LoyaltyProgram from "../components/loyaltyProgram";
 import { toast } from "react-toastify";
+import API_BASE_URL from '../config';
 
 // Dummy data for demonstration
 const dummyOrdersInit = [
@@ -170,7 +171,7 @@ const Customer = () => {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        const response = await fetch("http://localhost:5000/api/profile/me", {
+        const response = await fetch(`${API_BASE_URL}/api/profile/me`, {
           headers: {
             "Authorization": `Bearer ${token}`
           }
@@ -211,7 +212,7 @@ const Customer = () => {
     // Fetch cities/branches from backend API
     const fetchCities = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/branches");
+        const response = await fetch(`${API_BASE_URL}/api/branches`);
         const fetchedBranches = await response.json();
         // Update branches data with real data from backend
         setBranchesData(fetchedBranches);
@@ -229,7 +230,7 @@ const Customer = () => {
     // Fetch offers from backend API
     const fetchOffers = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/offers");
+        const response = await fetch(`${API_BASE_URL}/api/offers`);
         const data = await response.json();
         setOffers(data);
       } catch (error) {
@@ -244,7 +245,7 @@ const Customer = () => {
     const fetchProducts = async () => {
       setLoadingProducts(true);
       try {
-        const response = await fetch(`http://localhost:5000/api/products`);
+        const response = await fetch(`${API_BASE_URL}/api/products`);
         const data = await response.json();
         // Transform backend products to match frontend format
         const transformedProducts = data.map((product, index) => ({
@@ -253,7 +254,7 @@ const Customer = () => {
           price: product.price,
           category: product.type,
           description: `${product.quantity} ${product.unit} available`,
-          image: product.image ? `http://localhost:5000${product.image}` : "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80",
+          image: product.image ? `${API_BASE_URL}${product.image}` : "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80",
           quantity: product.quantity,
         }));
         setProducts(transformedProducts);
@@ -275,14 +276,14 @@ const Customer = () => {
       try {
         setLoadingOrders(true);
         // Fetch customer orders
-        const ordersResponse = await fetch(`http://localhost:5000/api/orders/all`);
+        const ordersResponse = await fetch(`${API_BASE_URL}/api/orders/all`);
         if (ordersResponse.ok) {
           const allOrders = await ordersResponse.json();
           setOrders(allOrders.filter(order => order.customerEmail === profile.email));
         }
         
         // Fetch customer feedbacks
-        const feedbackResponse = await fetch(`http://localhost:5000/api/feedback/customer/${profile.email}`);
+        const feedbackResponse = await fetch(`${API_BASE_URL}/api/feedback/customer/${profile.email}`);
         if (feedbackResponse.ok) {
           const allFeedbacks = await feedbackResponse.json();
           setFeedbacks(allFeedbacks.map(fb => ({
@@ -367,7 +368,7 @@ const Customer = () => {
         updateData.password = password;
       }
 
-      const response = await fetch("http://localhost:5000/api/profile/update", {
+      const response = await fetch(`${API_BASE_URL}/api/profile/update`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -504,7 +505,7 @@ const Customer = () => {
     try {
       // Save order to MongoDB via API
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/orders/create", {
+      const response = await fetch(`${API_BASE_URL}/api/orders/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -546,7 +547,7 @@ const Customer = () => {
     if (feedback.trim() === "") return;
     
     try {
-      const response = await fetch("http://localhost:5000/api/feedback/create", {
+      const response = await fetch(`${API_BASE_URL}/api/feedback/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

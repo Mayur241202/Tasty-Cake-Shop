@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import API_BASE_URL from '../../config';
 import { io } from "socket.io-client";
 import {
   PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend,
@@ -91,7 +92,7 @@ const OrdersAnalysis = ({ show }) => {
     if (!userBranch) return;
 
     // Initialize socket.io connection
-    const newSocket = io("http://localhost:5000");
+    const newSocket = io(`${API_BASE_URL}`);
     setSocket(newSocket);
     
     // Join the branch room
@@ -101,7 +102,7 @@ const OrdersAnalysis = ({ show }) => {
     const fetchOrders = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:5000/api/orders/branch/${userBranch}`);
+        const response = await fetch(`${API_BASE_URL}/api/orders/branch/${userBranch}`);
         if (response.ok) {
           const data = await response.json();
           setAllOrders(data);
@@ -148,7 +149,7 @@ const OrdersAnalysis = ({ show }) => {
   // Update order status via API
   const handleStatusChange = async (orderId, newStatus) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/orders/${orderId}/status`, {
+      const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"

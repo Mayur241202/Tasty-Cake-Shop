@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import API_BASE_URL from '../../config';
 
 const productTypes = ["Cakes", "Pastries", "Snacks"];
 const units = ["pcs", "kg", "g", "box", "pack", "dozen", "ml", "l"];
@@ -20,7 +21,7 @@ const InventoryManagement = ({ branch = "Central" }) => {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/products/${branch}`);
+      const response = await fetch(`${API_BASE_URL}/api/products/${branch}`);
       const data = await response.json();
       // Ensure only products from this branch are shown
       const filteredData = data.filter(product => product.branch === branch);
@@ -97,8 +98,8 @@ const InventoryManagement = ({ branch = "Central" }) => {
 
     try {
       const url = editId
-        ? `http://localhost:5000/api/products/${editId}`
-        : `http://localhost:5000/api/products`;
+        ? `${API_BASE_URL}/api/products/${editId}`
+        : `${API_BASE_URL}/api/products`;
 
       const method = editId ? "PUT" : "POST";
       
@@ -155,7 +156,7 @@ const InventoryManagement = ({ branch = "Central" }) => {
       image: null,
     });
     if (product.image) {
-      setPreviewImage(`http://localhost:5000${product.image}`);
+      setPreviewImage(`${API_BASE_URL}${product.image}`);
     }
   };
 
@@ -171,7 +172,7 @@ const InventoryManagement = ({ branch = "Central" }) => {
     setShowDeleteModal(false);
 
     try {
-      const response = await fetch(`http://localhost:5000/api/products/${productToDelete}`, {
+      const response = await fetch(`${API_BASE_URL}/api/products/${productToDelete}`, {
         method: "DELETE",
       });
 

@@ -1,4 +1,5 @@
 import React from "react";
+import API_BASE_URL from '../config';
 
 const isOfferActive = (toDate) => {
   const today = new Date();
@@ -33,7 +34,7 @@ const OffersSection = ({ offers }) => {
               <div className="flex justify-center w-full">
                 {offer.filePath && offer.fileName && offer.fileName.match(/\.(jpg|jpeg|png|gif)$/i) && (
                   <img
-                    src={`http://localhost:5000${offer.filePath}`}
+                    src={`${API_BASE_URL}${offer.filePath}`}
                     alt={offer.title}
                     className="max-h-[400px] rounded shadow mb-2 object-contain w-full"
                     style={{ background: "#fff" }}
@@ -41,7 +42,7 @@ const OffersSection = ({ offers }) => {
                 )}
                 {offer.filePath && offer.fileName && offer.fileName.match(/\.pdf$/i) && (
                   <iframe
-                    src={`http://localhost:5000${offer.filePath}`}
+                    src={`${API_BASE_URL}${offer.filePath}`}
                     title={offer.title}
                     className="w-full h-[500px] rounded shadow mb-2"
                   />

@@ -1,5 +1,6 @@
 // File: src/components/admin/Users.jsx
 import React, { useEffect, useState } from 'react';
+import API_BASE_URL from '../../config';
 import axios from 'axios';
 
 const getAccessLevel = role => {
@@ -13,7 +14,7 @@ const AdminUsers = () => {
 
   useEffect(() => {
     axios
-      .get('http://localhost:5000/api/admin/users')
+      .get(`${API_BASE_URL}/api/admin/users`)
       .then(res => {
         const formatted = res.data.map(e => ({
           _id: e._id,
@@ -29,7 +30,7 @@ const AdminUsers = () => {
 
   const handleDelete = async _id => {
     try {
-      await axios.delete(`http://localhost:5000/api/admin/users/${_id}`);
+      await axios.delete(`${API_BASE_URL}/api/admin/users/${_id}`);
       setEntries(entries.filter(e => e._id !== _id));
     } catch (err) {
       console.error('Delete error:', err);

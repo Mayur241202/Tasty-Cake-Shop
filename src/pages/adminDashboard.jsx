@@ -5,6 +5,7 @@ import AdminUsers from "../components/admin/users";
 import AdminAnalysis from "../components/admin/analysis";
 import AdminOffers from "../components/admin/offers";
 import AdminFeedback from "../components/admin/feedback";
+import API_BASE_URL from '../config';
 
 const sidebarItems = [
   { name: "Branches", icon: "🏢" },

@@ -1,5 +1,6 @@
 import React from "react";
 import Header from "../components/header";
+import API_BASE_URL from '../config';
 
 const Admin = () => {
   return (

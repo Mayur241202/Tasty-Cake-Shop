@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import logo from "../assets/logo.png";
+import API_BASE_URL from '../config';
 
 const CustomerHeader = ({ onCartClick, onProfileClick, hideHome = false}) => {
   return (

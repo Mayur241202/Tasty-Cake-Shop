@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import API_BASE_URL from '../../config';
 
 const AdminBranches = () => {
   const [branches, setBranches] = useState([]);
@@ -6,7 +7,7 @@ const AdminBranches = () => {
 
   // 🔁 Load Branches from Backend
   useEffect(() => {
-    fetch("http://localhost:5000/api/branches")
+    fetch(`${API_BASE_URL}/api/branches`)
       .then((res) => res.json())
       .then((data) => setBranches(data))
       .catch((err) => console.error("Error loading branches:", err));
@@ -21,7 +22,7 @@ const AdminBranches = () => {
     if (!form.name || !form.location) return;
 
     try {
-      const res = await fetch("http://localhost:5000/api/branches", {
+      const res = await fetch(`${API_BASE_URL}/api/branches`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -38,7 +39,7 @@ const AdminBranches = () => {
   // ❌ Delete Branch
   const handleDelete = async (id) => {
     try {
-      await fetch(`http://localhost:5000/api/branches/${id}`, {
+      await fetch(`${API_BASE_URL}/api/branches/${id}`, {
         method: "DELETE",
       });
       setBranches(branches.filter((b) => b._id !== id));

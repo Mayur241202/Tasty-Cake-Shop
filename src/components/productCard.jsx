@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import API_BASE_URL from '../config';
 
 const ProductCard = ({ product, onAddToCart }) => {
   const [quantity, setQuantity] = useState(1);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import API_BASE_URL from '../../config';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line
 } from "recharts";
@@ -21,8 +22,8 @@ const AdminAnalysis = () => {
         
         // Fetch all orders and branches
         const [ordersRes, branchesRes] = await Promise.all([
-          fetch("http://localhost:5000/api/orders/all"),
-          fetch("http://localhost:5000/api/branches")
+          fetch(`${API_BASE_URL}/api/orders/all`),
+          fetch(`${API_BASE_URL}/api/branches`)
         ]);
 
         if (!ordersRes.ok || !branchesRes.ok) {

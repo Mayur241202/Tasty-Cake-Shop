@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import API_BASE_URL from '../../config';
 
 const BranchManagerFeedback = ({ userBranch }) => {
   const [feedbacks, setFeedbacks] = useState([]);
@@ -12,7 +13,7 @@ const BranchManagerFeedback = ({ userBranch }) => {
   const fetchBranchFeedbacks = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:5000/api/feedback/branch/${userBranch}`);
+      const response = await fetch(`${API_BASE_URL}/api/feedback/branch/${userBranch}`);
       const data = await response.json();
       setFeedbacks(data || []);
     } catch (error) {
@@ -25,7 +26,7 @@ const BranchManagerFeedback = ({ userBranch }) => {
   const deleteFeedback = async (id) => {
     if (window.confirm("Are you sure you want to delete this feedback?")) {
       try {
-        await fetch(`http://localhost:5000/api/feedback/${id}`, {
+        await fetch(`${API_BASE_URL}/api/feedback/${id}`, {
           method: "DELETE"
         });
         setFeedbacks(feedbacks.filter(f => f._id !== id));

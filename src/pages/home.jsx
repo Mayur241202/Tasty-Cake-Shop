@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import logo from "../assets/logo.png";
+import API_BASE_URL from '../config';
 
 const Home = () => {
   const navigate = useNavigate();

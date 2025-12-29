@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import API_BASE_URL from '../../config';
 
 const branches = [
   { id: 1, name: "Central" },
@@ -37,7 +38,7 @@ const AdminOffers = () => {
 
   const fetchOffers = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/offers");
+      const response = await fetch(`${API_BASE_URL}/api/offers`);
       const data = await response.json();
       setOffers(data);
     } catch (error) {
@@ -104,8 +105,8 @@ const AdminOffers = () => {
       formData.append("toDate", toDate);
 
       const url = editingId 
-        ? `http://localhost:5000/api/offers/${editingId}`
-        : "http://localhost:5000/api/offers";
+        ? `${API_BASE_URL}/api/offers/${editingId}`
+        : `${API_BASE_URL}/api/offers`;
       
       const method = editingId ? "PUT" : "POST";
 
@@ -127,7 +128,7 @@ const AdminOffers = () => {
         data = JSON.parse(text);
       } catch (e) {
         console.error("Failed to parse JSON:", e);
-        setMessage("Server error: Invalid response format. Check if backend is running on http://localhost:5000");
+        setMessage(`Server error: Invalid response format. Check if backend is running on ${API_BASE_URL}`);
         setLoading(false);
         return;
       }
@@ -176,7 +177,7 @@ const AdminOffers = () => {
     setShowDeleteModal(false);
     
     try {
-      const response = await fetch(`http://localhost:5000/api/offers/${offerToDelete}`, {
+      const response = await fetch(`${API_BASE_URL}/api/offers/${offerToDelete}`, {
         method: "DELETE",
       });
 
@@ -313,7 +314,7 @@ const AdminOffers = () => {
                   <td className="py-2 px-4 border-b text-center">{offer.title}</td>
                   <td className="py-2 px-4 border-b text-center">
                     <a
-                      href={`http://localhost:5000${offer.filePath}`}
+                      href={`${API_BASE_URL}${offer.filePath}`}
                       download={offer.fileName}
                       className="text-pink-600 underline text-sm"
                       target="_blank"
@@ -374,7 +375,7 @@ const AdminOffers = () => {
                   <td className="py-2 px-4 border-b text-center">{offer.title}</td>
                   <td className="py-2 px-4 border-b text-center">
                     <a
-                      href={`http://localhost:5000${offer.filePath}`}
+                      href={`${API_BASE_URL}${offer.filePath}`}
                       download={offer.fileName}
                       className="text-pink-600 underline text-sm"
                       target="_blank"

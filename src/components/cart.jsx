@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import API_BASE_URL from '../config';
 
 const Cart = ({ cart, onCheckout, onRemove, onBack }) => {
   const [quantities, setQuantities] = useState(
