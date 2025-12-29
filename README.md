@@ -4,6 +4,12 @@ A comprehensive web application for managing a multi-branch cake shop with diffe
 
 ---
 
+## 🌐 Live Application
+
+🔗 **Visit the live application:** [https://tasty-cake-shop.onrender.com](https://tasty-cake-shop.onrender.com)
+
+---
+
 ## 📋 Table of Contents
 - [Project Overview](#project-overview)
 - [Tech Stack](#tech-stack)
