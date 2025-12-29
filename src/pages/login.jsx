@@ -23,6 +23,7 @@ const Login = () => {
 
       if (res.ok) {
         localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
         toast.success("Login successful!");
         // Redirect based on stakeholder
         if (stakeholder === "admin") navigate("/admin");

@@ -7,12 +7,25 @@ const StaffManagement = () => {
   const [editId, setEditId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   const token = localStorage.getItem("token");
   const headers = {
     "x-auth-token": token,
     "Content-Type": "application/json"
   };
+
+  // Decode token to get current user ID
+  useEffect(() => {
+    if (token) {
+      try {
+        const decoded = JSON.parse(atob(token.split('.')[1]));
+        setCurrentUserId(decoded.id);
+      } catch (err) {
+        console.error("Error decoding token:", err);
+      }
+    }
+  }, [token]);
 
   const fetchStaff = async () => {
     setLoading(true);
@@ -94,6 +107,24 @@ const StaffManagement = () => {
     return typeof staff.branch === "object" ? staff.branch.name || "Unknown" : `ID: ${staff.branch}`;
   };
 
+  const getCreatedByName = (staff) => {
+    // Use the createdByName field sent from backend, or fallback to old logic
+    if (staff.createdByName) return staff.createdByName;
+    
+    if (!staff.createdBy) return "Unknown";
+    if (typeof staff.createdBy === "object") {
+      const name = `${staff.createdBy.firstname || ''} ${staff.createdBy.lastname || ''}`.trim();
+      return name || "Unknown";
+    }
+    return "Unknown";
+  };
+
+  const isCreatedByCurrentUser = (staff) => {
+    if (!staff.createdBy) return false;
+    const createdById = typeof staff.createdBy === "object" ? staff.createdBy._id : staff.createdBy;
+    return createdById === currentUserId;
+  };
+
   return (
     <div>
       <h2 className="text-2xl font-bold mb-6 text-pink-700">Staff Management</h2>
@@ -151,7 +182,7 @@ const StaffManagement = () => {
         <table className="min-w-full bg-white rounded shadow text-center">
           <thead>
             <tr>
-              {["Name", "Role", "Contact", "Branch", "Actions"].map((title) => (
+              {["Name", "Role", "Contact", "Branch", "Created By", "Actions"].map((title) => (
                 <th key={title} className="py-2 px-4 border-b">
                   {title}
                 </th>
@@ -165,18 +196,29 @@ const StaffManagement = () => {
                 <td className="py-2 px-4 border-b">{staff.role}</td>
                 <td className="py-2 px-4 border-b">{staff.contact}</td>
                 <td className="py-2 px-4 border-b">{getBranchName(staff)}</td>
+                <td className="py-2 px-4 border-b">{getCreatedByName(staff)}</td>
                 <td className="py-2 px-4 border-b flex gap-2 justify-center">
                   <button
-                    className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded"
+                    className={`text-white px-3 py-1 rounded ${
+                      isCreatedByCurrentUser(staff)
+                        ? "bg-yellow-400 hover:bg-yellow-500"
+                        : "bg-gray-300 cursor-not-allowed"
+                    }`}
                     onClick={() => handleEdit(staff)}
-                    disabled={loading}
+                    disabled={loading || !isCreatedByCurrentUser(staff)}
+                    title={isCreatedByCurrentUser(staff) ? "Edit this staff" : "You can only edit staff you created"}
                   >
                     Edit
                   </button>
                   <button
-                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                    className={`text-white px-3 py-1 rounded ${
+                      isCreatedByCurrentUser(staff)
+                        ? "bg-red-500 hover:bg-red-600"
+                        : "bg-gray-300 cursor-not-allowed"
+                    }`}
                     onClick={() => handleDelete(staff._id)}
-                    disabled={loading}
+                    disabled={loading || !isCreatedByCurrentUser(staff)}
+                    title={isCreatedByCurrentUser(staff) ? "Delete this staff" : "You can only delete staff you created"}
                   >
                     Delete
                   </button>
@@ -185,7 +227,7 @@ const StaffManagement = () => {
             ))}
             {staffList.length === 0 && (
               <tr>
-                <td colSpan="5" className="py-4 text-center text-gray-500">
+                <td colSpan="6" className="py-4 text-center text-gray-500">
                   No staff members available
                 </td>
               </tr>

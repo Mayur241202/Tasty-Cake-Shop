@@ -58,12 +58,22 @@ router.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      { id: user._id, role: user.role, branch: user.branch },
       "mySuperSecretKey123!",
       { expiresIn: "1h" }
     );
 
-    res.json({ token });
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        firstname: user.firstname,
+        lastname: user.lastname,
+        email: user.email,
+        role: user.role,
+        branch: user.branch
+      }
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Server error" });

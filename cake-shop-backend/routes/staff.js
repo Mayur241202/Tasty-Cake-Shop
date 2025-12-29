@@ -22,12 +22,37 @@ const auth = (req, res, next) => {
 
 router.get("/", auth, async (req, res) => {
     try {
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      let query = {};
+      
+      // If branch manager, only show staff they created
+      if (user.role === "branchmanager") {
+        query.createdBy = req.user.id;
+      }
+      // If admin, show all staff
+
       // Always populate the branch field when returning staff data
-      const staff = await Staff.find()
+      const staff = await Staff.find(query)
         .populate('branch', 'name location')
+        .populate('createdBy', 'firstname lastname email')
         .sort({ createdAt: -1 });
       
-      res.json(staff);
+      // Format staff with proper createdBy name
+      const formattedStaff = staff.map(s => {
+        const obj = s.toObject();
+        if (obj.createdBy && typeof obj.createdBy === 'object') {
+          obj.createdByName = `${obj.createdBy.firstname || ''} ${obj.createdBy.lastname || ''}`.trim() || 'Unknown';
+        } else {
+          obj.createdByName = 'Unknown';
+        }
+        return obj;
+      });
+      
+      res.json(formattedStaff);
     } catch (err) {
       console.error("Error fetching staff:", err);
       res.status(500).json({ message: "Server error" });
@@ -93,9 +118,11 @@ router.post("/", auth, async (req, res) => {
       createdBy: req.user.id
     });
 
-    // After saving the staff, populate the branch field before sending the response
+    // After saving the staff, populate the branch and createdBy fields before sending the response
     const savedStaff = await newStaff.save();
-    const populatedStaff = await Staff.findById(savedStaff._id).populate('branch', 'name location');
+    const populatedStaff = await Staff.findById(savedStaff._id)
+      .populate('branch', 'name location')
+      .populate('createdBy', 'firstname lastname email');
     
     res.status(201).json(populatedStaff);
   } catch (err) {
@@ -117,6 +144,11 @@ router.put("/:id", auth, async (req, res) => {
       if (!user) {
         return res.status(403).json({ message: "Unauthorized" });
       }
+
+      // Check if branch manager is trying to edit staff they didn't create
+      if (user.role === "branchmanager" && staff.createdBy.toString() !== req.user.id) {
+        return res.status(403).json({ message: "You can only edit staff members you created" });
+      }
   
       // Update only the fields that were provided
       if (name) staff.name = name;
@@ -124,7 +156,9 @@ router.put("/:id", auth, async (req, res) => {
       if (contact) staff.contact = contact;
   
       const updatedStaff = await staff.save();
-      const populatedStaff = await Staff.findById(updatedStaff._id).populate("branch", "name location");
+      const populatedStaff = await Staff.findById(updatedStaff._id)
+        .populate("branch", "name location")
+        .populate("createdBy", "firstname lastname email");
   
       res.json(populatedStaff);
     } catch (err) {
@@ -137,6 +171,21 @@ router.put("/:id", auth, async (req, res) => {
 // DELETE staff member
 router.delete("/:id", auth, async (req, res) => {
   try {
+    const staff = await Staff.findById(req.params.id);
+    if (!staff) {
+      return res.status(404).json({ message: "Staff member not found" });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    // Check if branch manager is trying to delete staff they didn't create
+    if (user.role === "branchmanager" && staff.createdBy.toString() !== req.user.id) {
+      return res.status(403).json({ message: "You can only delete staff members you created" });
+    }
+
     await Staff.findByIdAndDelete(req.params.id);
     res.json({ message: "Staff member deleted" });
   } catch (err) {

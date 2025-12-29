@@ -18,6 +18,14 @@ const userSchema = new mongoose.Schema({
     },
     default: null,
   },
+  loyaltyPoints: {
+    type: Number,
+    default: 0
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 });
 
 module.exports = mongoose.model("User", userSchema);

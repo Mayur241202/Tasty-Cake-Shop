@@ -3,13 +3,15 @@ import Header from "../components/header";
 import AdminBranches from "../components/admin/branches";
 import AdminUsers from "../components/admin/users";
 import AdminAnalysis from "../components/admin/analysis";
-import AdminOffers from "../components/admin/offers"; // <-- import the new offers component
+import AdminOffers from "../components/admin/offers";
+import AdminFeedback from "../components/admin/feedback";
 
 const sidebarItems = [
   { name: "Branches", icon: "🏢" },
   { name: "Users", icon: "👤" },
   { name: "Analytics", icon: "📊" },
-  { name: "Offers", icon: "🎁" }, // <-- add Offers to sidebar
+  { name: "Offers", icon: "🎁" },
+  { name: "Feedback", icon: "📝" },
 ];
 
 const AdminDashboard = () => {
@@ -75,7 +77,8 @@ const AdminDashboard = () => {
           {selectedTab === "Branches" && <AdminBranches />}
           {selectedTab === "Users" && <AdminUsers />}
           {selectedTab === "Analytics" && <AdminAnalysis />}
-          {selectedTab === "Offers" && <AdminOffers />} {/* <-- render offers tab */}
+          {selectedTab === "Offers" && <AdminOffers />}
+          {selectedTab === "Feedback" && <AdminFeedback />}
         </div>
       </main>
     </div>

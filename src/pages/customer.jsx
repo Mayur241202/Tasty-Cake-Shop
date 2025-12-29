@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import CustomerHeader from "../components/customerHeader";
 import Card from "../components/card";
+import ProductCard from "../components/productCard";
 import Cart from "../components/cart";
 import OrderHistory from "../components/orderHistory";
 import OffersSection from "../components/offersSection"; // <-- import offers section
+import LoyaltyProgram from "../components/loyaltyProgram";
 import { toast } from "react-toastify";
 
 // Dummy data for demonstration
@@ -13,7 +16,8 @@ const dummyOrdersInit = [
 ];
 
 const dummyProfile = {
-  name: "Ketan Jedhe",
+  firstName: "Ketan",
+  lastName: "Jedhe",
   email: "ketan@gmail.com",
   mobile: "9875643857",
   loyaltyPoints: 120,
@@ -91,28 +95,39 @@ const branches = [
   { id: 1, name: "Central", location: "Delhi" },
   { id: 2, name: "West", location: "Mumbai" },
   { id: 3, name: "East", location: "Kolkata" },
+  { id: 4, name: "South", location: "Ahmedabad" },
 ];
 
 const Customer = () => {
+  const navigate = useNavigate();
   const [showProfile, setShowProfile] = useState(false);
   const [showCart, setShowCart] = useState(false);
   const [profileTab, setProfileTab] = useState(""); // "" | "profile" | "orders"
-  const [profile, setProfile] = useState({ ...dummyProfile });
-  const [editProfile, setEditProfile] = useState({ ...dummyProfile });
+  const [profile, setProfile] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    mobile: "",
+    loyaltyPoints: 0
+  });
+  const [editProfile, setEditProfile] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    mobile: "",
+    loyaltyPoints: 0
+  });
   const [isEditing, setIsEditing] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [products, setProducts] = useState([]);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [cart, setCart] = useState([]);
-  const [orders, setOrders] = useState(() => {
-    // Load orders for this customer from localStorage
-    const allOrders = JSON.parse(localStorage.getItem("all_customer_orders") || "[]");
-    // Optionally, filter by customer email if needed
-    // For now, show all orders placed by this customer (by email)
-    return allOrders.filter(order => order.customerEmail === (dummyProfile.email || ""));
-  });
+  const [branchesData, setBranchesData] = useState(branches); // Add state for branches
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
   const [search, setSearch] = useState("");
   const [feedback, setFeedback] = useState("");
   const [feedbacks, setFeedbacks] = useState([]);
@@ -120,28 +135,184 @@ const Customer = () => {
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [pincode, setPincode] = useState("");
+  const [cities, setCities] = useState([]); // <-- cities dropdown
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [redeemPoints, setRedeemPoints] = useState(0); // Points to redeem
+  const [useReward, setUseReward] = useState(false); // Toggle to use reward
   const profileMenuRef = useRef(null);
-
+  
+  // Authentication check - runs only once on mount
   useEffect(() => {
-    // Simulate fetching offers uploaded by admin (from localStorage or backend)
-    // For demo, we use localStorage (set in admin offers component)
-    const adminOffers = JSON.parse(localStorage.getItem("admin_offers") || "[]");
-    setOffers(adminOffers);
+    const token = localStorage.getItem("token");
+    const user = localStorage.getItem("user");
+    
+    if (!token || !user) {
+      navigate("/login");
+      return;
+    }
+    
+    try {
+      const userData = JSON.parse(user);
+      if (userData.role !== "customer") {
+        navigate("/login");
+      }
+    } catch (error) {
+      console.error("Error parsing user data:", error);
+      navigate("/login");
+    }
   }, []);
 
-  // Update orders state when order status is changed by branch manager
+  // Fetch user profile from backend
   useEffect(() => {
-    const interval = setInterval(() => {
-      const allOrders = JSON.parse(localStorage.getItem("all_customer_orders") || "[]");
-      setOrders(allOrders.filter(order => order.customerEmail === (profile.email || "")));
-    }, 2000); // Poll every 2 seconds for updates
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const response = await fetch("http://localhost:5000/api/profile/me", {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          setProfile({
+            firstName: userData.firstname,
+            lastName: userData.lastname,
+            email: userData.email,
+            mobile: userData.mobile,
+            loyaltyPoints: userData.loyaltyPoints || 0
+          });
+          setEditProfile({
+            firstName: userData.firstname,
+            lastName: userData.lastname,
+            email: userData.email,
+            mobile: userData.mobile,
+            loyaltyPoints: userData.loyaltyPoints || 0
+          });
+        } else if (response.status === 401 || response.status === 403) {
+          console.warn("Token invalid or expired");
+          // Don't redirect here - just log the warning
+          // The user can still use cached data
+        } else {
+          console.error("Failed to fetch user profile:", response.status);
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        // Network error - don't log out the user
+      }
+    };
+    fetchUserProfile();
+  }, []);
+
+  useEffect(() => {
+    // Fetch cities/branches from backend API
+    const fetchCities = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/branches");
+        const fetchedBranches = await response.json();
+        // Update branches data with real data from backend
+        setBranchesData(fetchedBranches);
+        // Extract unique cities from branches
+        const uniqueCities = [...new Set(fetchedBranches.map(branch => branch.location))];
+        setCities(uniqueCities);
+      } catch (error) {
+        console.error("Error fetching cities:", error);
+      }
+    };
+    fetchCities();
+  }, []);
+
+  useEffect(() => {
+    // Fetch offers from backend API
+    const fetchOffers = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/offers");
+        const data = await response.json();
+        setOffers(data);
+      } catch (error) {
+        console.error("Error fetching offers:", error);
+      }
+    };
+    fetchOffers();
+  }, []);
+
+  // Fetch products from backend (all branches)
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoadingProducts(true);
+      try {
+        const response = await fetch(`http://localhost:5000/api/products`);
+        const data = await response.json();
+        // Transform backend products to match frontend format
+        const transformedProducts = data.map((product, index) => ({
+          id: product._id || index,
+          title: product.name,
+          price: product.price,
+          category: product.type,
+          description: `${product.quantity} ${product.unit} available`,
+          image: product.image ? `http://localhost:5000${product.image}` : "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80",
+          quantity: product.quantity,
+        }));
+        setProducts(transformedProducts);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        setProducts([]);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  // Fetch orders from MongoDB and feedbacks
+  useEffect(() => {
+    const fetchOrdersAndFeedbacks = async () => {
+      if (!profile.email) return;
+      
+      try {
+        setLoadingOrders(true);
+        // Fetch customer orders
+        const ordersResponse = await fetch(`http://localhost:5000/api/orders/all`);
+        if (ordersResponse.ok) {
+          const allOrders = await ordersResponse.json();
+          setOrders(allOrders.filter(order => order.customerEmail === profile.email));
+        }
+        
+        // Fetch customer feedbacks
+        const feedbackResponse = await fetch(`http://localhost:5000/api/feedback/customer/${profile.email}`);
+        if (feedbackResponse.ok) {
+          const allFeedbacks = await feedbackResponse.json();
+          setFeedbacks(allFeedbacks.map(fb => ({
+            _id: fb._id,
+            text: fb.text,
+            date: new Date(fb.createdAt).toLocaleString()
+          })));
+        }
+      } catch (error) {
+        console.error("Error fetching orders and feedbacks:", error);
+      } finally {
+        setLoadingOrders(false);
+      }
+    };
+    
+    fetchOrdersAndFeedbacks();
+    
+    // Poll every 5 seconds for updates
+    const interval = setInterval(fetchOrdersAndFeedbacks, 5000);
     return () => clearInterval(interval);
   }, [profile.email]);
 
   // Close the profile menu if clicked outside
   useEffect(() => {
     function handleClickOutside(event) {
+      // Don't close if clicking on the modal (fixed position element)
+      if (event.target.closest(".profile-modal")) {
+        return;
+      }
+      
       if (
         profileMenuRef.current &&
         !profileMenuRef.current.contains(event.target)
@@ -167,7 +338,7 @@ const Customer = () => {
   };
 
   // Simulate profile update
-  const handleProfileUpdate = (e) => {
+  const handleProfileUpdate = async (e) => {
     e.preventDefault();
     // Password update logic
     if (password || confirmPassword) {
@@ -177,27 +348,80 @@ const Customer = () => {
       }
       setPasswordError("");
     }
-    setProfile({ ...editProfile });
-    setIsEditing(false);
-    setShowProfile(false);
-    setPassword("");
-    setConfirmPassword("");
-    setPasswordError("");
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Authentication token not found");
+        return;
+      }
+
+      const updateData = {
+        firstname: editProfile.firstName,
+        lastname: editProfile.lastName,
+        email: editProfile.email,
+        mobile: editProfile.mobile
+      };
+
+      if (password) {
+        updateData.password = password;
+      }
+
+      const response = await fetch("http://localhost:5000/api/profile/update", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      if (response.ok) {
+        const updatedUser = await response.json();
+        setProfile({
+          firstName: updatedUser.firstname,
+          lastName: updatedUser.lastname,
+          email: updatedUser.email,
+          mobile: updatedUser.mobile,
+          loyaltyPoints: updatedUser.loyaltyPoints || 0
+        });
+        setEditProfile({
+          firstName: updatedUser.firstname,
+          lastName: updatedUser.lastname,
+          email: updatedUser.email,
+          mobile: updatedUser.mobile,
+          loyaltyPoints: updatedUser.loyaltyPoints || 0
+        });
+        toast.success("Profile updated successfully!");
+        setIsEditing(false);
+        setShowProfile(false);
+        setPassword("");
+        setConfirmPassword("");
+        setPasswordError("");
+      } else {
+        const error = await response.json();
+        toast.error(error.message || "Failed to update profile");
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error("Error updating profile. Please try again.");
+    }
   };
 
   // Add product to cart
   const handleAddToCart = (product) => {
+    const selectedQty = product.selectedQty || 1;
     const found = cart.find((item) => item.id === product.id);
   
     if (found) {
       setCart((prev) =>
         prev.map((item) =>
-          item.id === product.id ? { ...item, qty: item.qty + 1 } : item
+          item.id === product.id ? { ...item, qty: item.qty + selectedQty } : item
         )
       );
     } else {
-      toast.success("Added to cart!");
-      setCart((prev) => [...prev, { ...product, qty: 1 }]);
+      toast.success(`Added ${selectedQty} item(s) to cart!`);
+      setCart((prev) => [...prev, { ...product, qty: selectedQty }]);
     }
   };
   
@@ -208,7 +432,7 @@ const Customer = () => {
 
   // Find nearest branch by city (simple match for demo)
   const getNearestBranch = (city) => {
-    const found = branches.find(
+    const found = branchesData.find(
       (b) => b.location.toLowerCase() === city.trim().toLowerCase()
     );
     return found ? found.name : "Central";
@@ -221,60 +445,143 @@ const Customer = () => {
   };
 
   // Finalize order after address form
-  const handlePlaceOrder = (e) => {
+  const handlePlaceOrder = async (e) => {
     e.preventDefault();
+    
+    // Validation
     if (!address || !city || !pincode) {
       toast.error("Please fill all address details.");
       return;
     }
+    
+    // Address validation: must be at least 10 characters
+    if (address.trim().length < 10) {
+      toast.error("Address must be at least 10 characters long.");
+      return;
+    }
+    
+    // Address validation: should only contain letters, numbers, spaces, and common punctuation
+    if (!/^[a-zA-Z0-9\s,./\-#&]*$/.test(address)) {
+      toast.error("Address contains invalid characters.");
+      return;
+    }
+    
+    // Pincode validation: must be exactly 6 digits
+    if (!/^\d{6}$/.test(pincode)) {
+      toast.error("Pincode must be exactly 6 digits.");
+      return;
+    }
+
+    // Validate points redemption
+    const pointsToRedeem = useReward ? Math.min(redeemPoints, profile.loyaltyPoints || 0) : 0;
+    if (useReward && redeemPoints < 1000 && redeemPoints > 0) {
+      toast.error("Minimum 1000 points required to redeem. You have " + (profile.loyaltyPoints || 0) + " points.");
+      return;
+    }
+
     const branch = getNearestBranch(city);
+    let cartTotal = cart.reduce((sum, item) => sum + item.qty * item.price, 0);
+    const discountAmount = Math.floor(pointsToRedeem / 1000); // 1000 points = ₹1 discount
+    const finalTotal = Math.max(0, cartTotal - discountAmount); // Ensure total doesn't go below 0
+
     const newOrder = {
       id: orders.length + 1,
       date: new Date().toISOString().slice(0, 10),
-      items: cart.map((item) => item.title),
-      total: cart.reduce((sum, item) => sum + item.qty * item.price, 0),
+      items: cart.map((item) => ({ title: item.title, price: item.price, qty: item.qty })),
+      total: finalTotal,
       status: "Processing",
       address,
       city,
       pincode,
       branch,
-      customerName: profile.name || "Customer",
-      customerEmail: profile.email || "", // <-- add email for branch manager
+      customerName: `${profile.firstName} ${profile.lastName}` || "Customer",
+      customerEmail: profile.email || "",
+      pointsRedeemed: pointsToRedeem,
+      originalTotal: cartTotal,
+      discount: discountAmount
     };
-    setOrders([newOrder, ...orders]);
-    setCart([]);
-    setShowCart(false);
-    setProfileTab("orders");
-    setShowProfile(true);
-    setShowCheckoutForm(false);
 
-    // Save to all_customer_orders in localStorage for branch manager view
-    const allOrders = JSON.parse(localStorage.getItem("all_customer_orders") || "[]");
-    localStorage.setItem("all_customer_orders", JSON.stringify([newOrder, ...allOrders]));
+    try {
+      // Save order to MongoDB via API
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5000/api/orders/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(newOrder)
+      });
 
-    // Calculate total products ordered
-    const totalProducts = cart.reduce((sum, item) => sum + item.qty, 0);
-    setProfile((prev) => ({
-      ...prev,
-      loyaltyPoints: prev.loyaltyPoints + totalProducts * 5,
-    }));
+      if (!response.ok) {
+        throw new Error("Failed to save order to database");
+      }
 
-    toast.success("Order placed successfully!");
+      const savedOrder = await response.json();
+      
+      setOrders([savedOrder, ...orders]);
+      setCart([]);
+      setShowCart(false);
+      setProfileTab("orders");
+      setShowProfile(true);
+      setShowCheckoutForm(false);
+      setRedeemPoints(0);
+      setUseReward(false);
+
+      // Show order confirmation with loyalty info
+      if (pointsToRedeem > 0) {
+        toast.success(`Order placed! ₹${discountAmount} discount applied from ${pointsToRedeem} loyalty points.`);
+      } else {
+        toast.success("Order placed successfully!");
+      }
+    } catch (error) {
+      console.error("Error placing order:", error);
+      toast.error("Failed to place order. Please try again.");
+    }
   };
 
   // Handle feedback submit
-  const handleFeedbackSubmit = (e) => {
+  const handleFeedbackSubmit = async (e) => {
     e.preventDefault();
     if (feedback.trim() === "") return;
-    setFeedbacks([{ text: feedback, date: new Date().toLocaleString() }, ...feedbacks]);
-    setFeedback("");
+    
+    try {
+      const response = await fetch("http://localhost:5000/api/feedback/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          customerEmail: profile.email,
+          customerName: `${profile.firstName} ${profile.lastName}`,
+          text: feedback,
+          rating: 5
+        })
+      });
+
+      if (response.ok) {
+        const newFeedback = await response.json();
+        setFeedbacks([{
+          _id: newFeedback._id,
+          text: newFeedback.text,
+          date: new Date(newFeedback.createdAt).toLocaleString()
+        }, ...feedbacks]);
+        setFeedback("");
+        toast.success("Thank you for your feedback!");
+      } else {
+        toast.error("Failed to submit feedback");
+      }
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+      toast.error("Error submitting feedback");
+    }
   };
 
   // Calculate cart total
   const cartTotal = cart.reduce((sum, item) => sum + item.qty * item.price, 0);
 
   // Filter products by category and search
-  const filteredProducts = dummyProducts.filter((p) => {
+  const filteredProducts = products.filter((p) => {
     const matchesCategory = selectedCategory === "All" || p.category === selectedCategory;
     const matchesSearch =
       search.trim() === "" ||
@@ -318,12 +625,20 @@ const Customer = () => {
                 Update Profile
               </button>
               <button
-                className={`px-4 py-3 text-left hover:bg-blue-50 transition rounded-b-xl ${
+                className={`px-4 py-3 text-left hover:bg-blue-50 transition ${
                   profileTab === "orders" ? "bg-blue-100 font-semibold" : ""
                 }`}
                 onClick={() => { setProfileTab("orders"); setIsEditing(false); }}
               >
                 Order History
+              </button>
+              <button
+                className={`px-4 py-3 text-left hover:bg-blue-50 transition rounded-b-xl ${
+                  profileTab === "loyalty" ? "bg-blue-100 font-semibold" : ""
+                }`}
+                onClick={() => { setProfileTab("loyalty"); setIsEditing(false); }}
+              >
+                🎁 Loyalty Program
               </button>
             </div>
           </div>
@@ -411,29 +726,18 @@ const Customer = () => {
                     <h2 className="text-2xl font-bold mb-6 text-[#8c2673]">
                       {selectedCategory === "All" ? "Shop Products" : selectedCategory}
                     </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+                    {loadingProducts ? (
+                      <div className="text-center text-gray-500 py-8">
+                        Loading products...
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
                       {filteredProducts.map(product => (
                         <div key={product.id} className="h-full">
-                          <div className="bg-white p-4 shadow-md rounded-lg hover:shadow-xl transition duration-300 flex flex-col h-full">
-                            <img
-                              src={product.image}
-                              alt={product.title}
-                              className="w-full h-48 object-cover rounded-md mb-2"
-                              loading="lazy"
-                            />
-                            <div className="flex-1 flex flex-col">
-                              <h3 className="text-lg font-semibold mb-1" style={{ fontFamily: "'Pacifico', cursive, 'Comic Sans MS', cursive" }}>{product.title}</h3>
-                              <p className="text-green-600 font-bold mb-1">₹{product.price}</p>
-                              <p className="text-gray-600 text-sm mb-2 flex-1">{product.description}</p>
-                            </div>
-                            <button
-                              className="mt-3 bg-gradient-to-r from-pink-500 to-pink-700 text-white px-6 py-2 rounded-full font-cursive text-lg shadow-lg tracking-wide w-full whitespace-nowrap overflow-hidden text-ellipsis"
-                              style={{ fontFamily: "'Pacifico', cursive, 'Comic Sans MS', cursive" }}
-                              onClick={() => handleAddToCart(product)}
-                            >
-                              Add to Cart
-                            </button>
-                          </div>
+                          <ProductCard 
+                            product={product}
+                            onAddToCart={handleAddToCart}
+                          />
                         </div>
                       ))}
                       {filteredProducts.length === 0 && (
@@ -442,6 +746,7 @@ const Customer = () => {
                         </div>
                       )}
                     </div>
+                    )}
                     {/* Feedback and Loyalty Points */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-10">
                       {/* Feedback Section */}
@@ -492,16 +797,34 @@ const Customer = () => {
                 )}
                 {/* Cart Section */}
                 {showCart && !showCheckoutForm && (
-                  <Cart
-                    cart={cart}
-                    onCheckout={handleCheckout}
-                    onRemove={handleRemoveFromCart}
-                  />
+                  <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto relative">
+                      <button
+                        className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-3xl z-10 bg-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-gray-100"
+                        onClick={() => setShowCart(false)}
+                        title="Close cart"
+                      >
+                        ×
+                      </button>
+                      <Cart
+                        cart={cart}
+                        onCheckout={handleCheckout}
+                        onRemove={handleRemoveFromCart}
+                        onBack={() => setShowCart(false)}
+                      />
+                    </div>
+                  </div>
                 )}
                 {/* Checkout Address Form */}
                 {showCart && showCheckoutForm && (
-                  <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
-                    <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md relative">
+                  <div 
+                    className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30"
+                    onClick={() => setShowCheckoutForm(false)}
+                  >
+                    <div 
+                      className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md relative"
+                      onClick={e => e.stopPropagation()}
+                    >
                       <button
                         className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl"
                         onClick={() => setShowCheckoutForm(false)}
@@ -517,30 +840,96 @@ const Customer = () => {
                             type="text"
                             value={address}
                             onChange={e => setAddress(e.target.value)}
-                            className="w-full p-2 border rounded"
+                            placeholder="e.g., 123 Main St, Apartment 4B"
+                            className={`w-full p-2 border rounded ${
+                              address && address.trim().length < 10 ? "border-red-500" : "border-gray-300"
+                            }`}
                             required
                           />
+                          {address && address.trim().length < 10 && (
+                            <p className="text-red-500 text-xs mt-1">Address must be at least 10 characters</p>
+                          )}
                         </div>
                         <div>
                           <label className="block text-sm font-medium mb-1">City</label>
-                          <input
-                            type="text"
+                          <select
                             value={city}
                             onChange={e => setCity(e.target.value)}
                             className="w-full p-2 border rounded"
                             required
-                          />
+                          >
+                            <option value="">Select a city</option>
+                            {cities.map((cityName, index) => (
+                              <option key={index} value={cityName}>
+                                {cityName}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                         <div>
                           <label className="block text-sm font-medium mb-1">Pincode</label>
                           <input
                             type="text"
                             value={pincode}
-                            onChange={e => setPincode(e.target.value)}
-                            className="w-full p-2 border rounded"
+                            onChange={e => {
+                              // Only allow digits and limit to 6 characters
+                              const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                              setPincode(value);
+                            }}
+                            placeholder="e.g., 110001"
+                            maxLength="6"
+                            className={`w-full p-2 border rounded ${
+                              pincode && pincode.length !== 6 ? "border-red-500" : "border-gray-300"
+                            }`}
                             required
                           />
+                          {pincode && pincode.length !== 6 && (
+                            <p className="text-red-500 text-xs mt-1">Pincode must be exactly 6 digits</p>
+                          )}
+                          {pincode && pincode.length === 6 && (
+                            <p className="text-green-500 text-xs mt-1">✓ Valid pincode</p>
+                          )}
                         </div>
+
+                        {/* Loyalty Points Redemption */}
+                        <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-4 rounded-lg border border-purple-200">
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={useReward}
+                              onChange={(e) => {
+                                setUseReward(e.target.checked);
+                                if (!e.target.checked) setRedeemPoints(0);
+                              }}
+                              className="w-4 h-4 text-purple-600"
+                            />
+                            <span className="font-semibold text-gray-800">
+                              🎁 Use Loyalty Points ({profile?.loyaltyPoints || 0} available)
+                            </span>
+                          </label>
+                          
+                          {useReward && (
+                            <div className="mt-3 space-y-2">
+                              <input
+                                type="number"
+                                min="0"
+                                max={profile?.loyaltyPoints || 0}
+                                value={redeemPoints}
+                                onChange={(e) => setRedeemPoints(Math.max(0, Math.min(parseInt(e.target.value) || 0, profile?.loyaltyPoints || 0)))}
+                                placeholder="Enter points to redeem"
+                                className="w-full p-2 border border-purple-300 rounded text-sm"
+                              />
+                              <div className="text-sm text-gray-600">
+                                <p>Redeeming: <span className="font-bold text-purple-600">{redeemPoints} points</span></p>
+                                <p>Discount: <span className="font-bold text-green-600">₹{Math.floor(redeemPoints / 1000)}</span></p>
+                                {redeemPoints > 0 && redeemPoints < 1000 && (
+                                  <p className="text-red-500 mt-1">⚠️ Minimum 1000 points required to redeem</p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
                         <div className="flex gap-2 mt-4">
                           <button
                             type="submit"
@@ -565,8 +954,14 @@ const Customer = () => {
           )}
           {/* Profile/OrderHistory Section as Modal Form */}
           {showProfile && profileTab === "profile" && isEditing && (
-            <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
-              <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md relative">
+            <div 
+              className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30"
+              onClick={() => { setShowProfile(false); setIsEditing(false); setPassword(""); setConfirmPassword(""); setPasswordError(""); }}
+            >
+              <div 
+                className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md relative profile-modal"
+                onClick={e => e.stopPropagation()}
+              >
                 <button
                   className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl"
                   onClick={() => { setShowProfile(false); setIsEditing(false); setPassword(""); setConfirmPassword(""); setPasswordError(""); }}
@@ -576,16 +971,29 @@ const Customer = () => {
                 </button>
                 <h2 className="text-2xl font-bold mb-4 text-blue-700">Update Profile</h2>
                 <form onSubmit={handleProfileUpdate} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Name</label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={editProfile.name}
-                      onChange={handleProfileChange}
-                      className="w-full p-2 border rounded"
-                      required
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">First Name</label>
+                      <input
+                        type="text"
+                        name="firstName"
+                        value={editProfile.firstName}
+                        onChange={handleProfileChange}
+                        className="w-full p-2 border rounded"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Last Name</label>
+                      <input
+                        type="text"
+                        name="lastName"
+                        value={editProfile.lastName}
+                        onChange={handleProfileChange}
+                        className="w-full p-2 border rounded"
+                        required
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Email</label>
@@ -658,17 +1066,70 @@ const Customer = () => {
           )}
           {/* Order History Modal */}
           {showProfile && profileTab === "orders" && (
-            <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
-              <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-2xl relative">
+            <div 
+              className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setShowProfile(false);
+                  setProfileTab("");
+                }
+              }}
+            >
+              <div 
+                className="bg-white rounded-xl shadow-lg p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto relative"
+                onClick={e => e.stopPropagation()}
+                onMouseDown={e => e.stopPropagation()}
+              >
                 <button
-                  className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl"
-                  onClick={() => { setShowProfile(false); setProfileTab(""); }}
+                  className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl z-10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowProfile(false);
+                    setProfileTab("");
+                  }}
                   title="Close"
                 >
                   &times;
                 </button>
                 <h2 className="text-2xl font-bold mb-4 text-blue-700">Order History</h2>
                 <OrderHistory orders={orders} />
+              </div>
+            </div>
+          )}
+          {/* Loyalty Program Modal */}
+          {showProfile && profileTab === "loyalty" && (
+            <div 
+              className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setShowProfile(false);
+                  setProfileTab("");
+                }
+              }}
+            >
+              <div 
+                className="bg-white rounded-xl shadow-lg p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto relative"
+                onClick={e => e.stopPropagation()}
+                onMouseDown={e => e.stopPropagation()}
+              >
+                <button
+                  className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl z-10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowProfile(false);
+                    setProfileTab("");
+                  }}
+                  title="Close"
+                >
+                  &times;
+                </button>
+                <LoyaltyProgram 
+                  profile={profile} 
+                  onClose={() => {
+                    setShowProfile(false);
+                    setProfileTab("");
+                  }}
+                />
               </div>
             </div>
           )}

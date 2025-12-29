@@ -49,4 +49,54 @@ router.get("/", async (req, res) => {
   }
 });
 
+// Update Offer
+router.put("/:id", upload.single("file"), async (req, res) => {
+  try {
+    const { title, branch, fromDate, toDate } = req.body;
+    const offerId = req.params.id;
+
+    if (!title || !branch || !fromDate || !toDate) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const offer = await Offer.findById(offerId);
+    if (!offer) {
+      return res.status(404).json({ message: "Offer not found" });
+    }
+
+    offer.title = title;
+    offer.branch = branch;
+    offer.fromDate = fromDate;
+    offer.toDate = toDate;
+
+    if (req.file) {
+      offer.fileName = req.file.filename;
+      offer.filePath = `/uploads/offers/${req.file.filename}`;
+    }
+
+    await offer.save();
+    res.json(offer);
+  } catch (err) {
+    console.error("Update error:", err);
+    res.status(500).json({ message: "Failed to update offer", error: err.message });
+  }
+});
+
+// Delete Offer
+router.delete("/:id", async (req, res) => {
+  try {
+    const offerId = req.params.id;
+    const offer = await Offer.findByIdAndDelete(offerId);
+    
+    if (!offer) {
+      return res.status(404).json({ message: "Offer not found" });
+    }
+
+    res.json({ message: "Offer deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to delete offer" });
+  }
+});
+
 module.exports = router;
